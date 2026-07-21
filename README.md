@@ -23,11 +23,11 @@ Projekt pobiera aktualny katalog i ceny dla wybranego punktu pobrań, zapisuje j
 
 - Python 3.10 lub nowszy,
 - połączenie z internetem podczas inicjalizacji i odświeżania danych,
-- nowoczesna przeglądarka dla interfejsu WWW.
+- nowoczesna przeglądarka dla interfejsu webowego.
 
 Podstawowa aplikacja korzysta wyłącznie z biblioteki standardowej Pythona. Pakiety `numpy` i `scipy` są opcjonalne — umożliwiają dokładną optymalizację ILP dla list przekraczających domyślny limit 20 badań.
 
-## Szybki start — interfejs WWW
+## Szybki start - interfejs webowy
 
 ```bash
 git clone https://github.com/xraysight/diagpl-optimize.git
@@ -57,7 +57,7 @@ python3 diagpl-optimize-gui.py --port 9000
 python3 diagpl-optimize-gui.py --baza /ścieżka/do/bazy.sqlite
 ```
 
-Serwer domyślnie nasłuchuje wyłącznie na `127.0.0.1`. Nie wystawiaj go publicznie — aplikacja nie ma uwierzytelniania i jest przeznaczona do użytku lokalnego.
+Serwer domyślnie nasłuchuje wyłącznie na `127.0.0.1`. Nie wystawiaj go publicznie - aplikacja nie ma uwierzytelniania i jest przeznaczona do użytku lokalnego.
 
 ## Użycie z wiersza poleceń
 
@@ -102,9 +102,9 @@ python3 diagpl-optimize-cli.py --pomoc
 
 Tryb `automatyczny` wybiera metodę zależnie od rozmiaru wejścia:
 
-1. do 20 badań — dokładne programowanie dynamiczne po maskach bitowych,
-2. powyżej 20 badań — dokładny solver ILP, jeśli dostępne są `numpy` i `scipy`,
-3. bez zależności ILP — szybki algorytm zachłanny z wyraźnym oznaczeniem, że wynik jest przybliżony.
+1. do 20 badań - dokładne programowanie dynamiczne po maskach bitowych,
+2. powyżej 20 badań - dokładny solver ILP, jeśli dostępne są `numpy` i `scipy`,
+3. bez zależności ILP - szybki algorytm zachłanny z wyraźnym oznaczeniem, że wynik jest przybliżony.
 
 Metodę można wskazać jawnie:
 
@@ -168,7 +168,7 @@ diagpl-optimize-PRD.md   szczegółowe wymagania produktu
 
 ## Współtworzenie
 
-Zgłoszenia błędów i propozycje zmian są mile widziane. Przed wysłaniem pull requesta przeczytaj [CONTRIBUTING.md](CONTRIBUTING.md) i uruchom pełny zestaw testów.
+Projekt powstał w dużej mierze jako vibe coding. Zgłoszenia błędów i propozycje zmian są mile widziane. Przed wysłaniem pull requesta przeczytaj [CONTRIBUTING.md](CONTRIBUTING.md) i uruchom pełny zestaw testów.
 
 ## Licencja
 
