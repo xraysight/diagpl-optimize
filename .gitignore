@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Lokalne dane i eksporty aplikacji
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+diagpl-products-*.json
+diagpl-locations.txt
+
+# Narzędzia i edytory
+.understand-anything/
+.idea/
+.vscode/
+*.swp
+*~
+
+# System operacyjny
+.DS_Store
+Thumbs.db
