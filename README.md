@@ -7,6 +7,10 @@ Projekt pobiera aktualny katalog i ceny dla wybranego punktu pobrań, zapisuje j
 > [!IMPORTANT]
 > To nieoficjalny projekt, niezwiązany z Diagnostyką S.A. Wyniki mają charakter informacyjny. Przed zakupem sprawdź aktualną cenę, dostępność, zakres pakietu i warunki badania bezpośrednio w serwisie [DIAG.pl](https://diag.pl/).
 
+## Interfejs webowy
+
+![Interfejs webowy DIAG.pl Optimize z wybranymi badaniami i najtańszym zestawem](docs/images/diagpl-optimize-web.png)
+
 ## Możliwości
 
 - wybór punktu pobrań po nazwie, mieście lub adresie,
