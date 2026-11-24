@@ -110,6 +110,7 @@ input:focus { border-color:#52a7df; box-shadow:0 0 0 4px #0878d116 }
 .choice a:hover { color:var(--blue-dark); text-decoration:underline; text-underline-offset:3px }
 .choice small { display:block; margin-top:3px; font-weight:400 }
 .error { color:#9d2938; background:#fff1f2; border:1px solid #ffd5da; padding:12px; border-radius:11px }
+.warning { margin-top:9px; padding:12px; border:1px solid #f2d18e; border-radius:11px; background:#fffbeb; color:#713f12; white-space:pre-line; overflow-wrap:anywhere }
 @media(max-width:780px){.workspace{grid-template-columns:1fr}header{align-items:flex-start}.brand p{display:none}}
 @media(max-width:560px){main{padding:20px 12px 42px}header{flex-direction:column}.card{padding:17px}.metrics{grid-template-columns:1fr}.choice{align-items:flex-start;flex-direction:column}.price{align-self:flex-end}}
 </style>
@@ -136,7 +137,7 @@ input:focus { border-color:#52a7df; box-shadow:0 0 0 4px #0878d116 }
       <p class="lead">Wpisz co najmniej dwa znaki i dodaj badania do swojej listy.</p>
       <div class="search-wrap"><span class="search-icon">⌕</span><input id="search" disabled autocomplete="off" placeholder="Najpierw wybierz punkt pobrań" aria-autocomplete="list" aria-controls="matches"><div id="matches" class="matches hidden" role="listbox"></div></div>
     </section>
-    <section id="result" class="card hidden"><div class="step"><b>4</b> Wynik</div><h2>Najtańszy wariant</h2><div id="result-body"></div></section>
+    <section id="result" class="card hidden"><div class="step"><b>4</b> Wynik</div><h2>Proponowany zestaw</h2><div id="result-body"></div></section>
   </div>
   <section class="card">
     <div class="step"><b>3</b> Twoja lista</div>
@@ -179,7 +180,9 @@ function renderSelected(){ const box=$('selected'); box.replaceChildren(); selec
 $('clear-selected').onclick=clearProductSelection;
 $('optimize').onclick=async()=>{ const button=$('optimize'); button.disabled=true; button.textContent='Optymalizuję…'; try { const r=await api('/api/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({products:selected.map(x=>x.name)})}); renderResult(r); } catch(e){showError(e)} finally {button.disabled=!selected.length||!selectedInstitution;button.textContent='Oblicz najlepszy zestaw →'} };
 function optimizationMethod(note){ return {'exact DP':'dokładna','ILP exact':'dokładna','greedy approximate':'przybliżona (algorytm zachłanny)'}[note]||note }
-function renderResult(r){ const box=$('result-body'); box.replaceChildren(); const metrics=node('div',undefined,'metrics'); [['Cena osobno',r.original_sum,''],['Cena optymalna',r.optimized_sum,''],['Oszczędność',r.savings,'saving']].forEach(([label,value,cls])=>{const m=node('div',label,'metric '+cls);m.append(node('strong',money(value,r.currency)));metrics.append(m)}); box.append(metrics,node('small','Metoda optymalizacji: '+optimizationMethod(r.solver_note))); r.chosen.forEach(item=>{const row=node('div',undefined,'choice'),text=node('span'),link=node('a',item.name);text.append(document.createTextNode(item.kind==='package'?'Pakiet: ':'Produkt: '),link);link.href=`https://diag.pl/sklep/${item.kind==='package'?'pakiety':'badania'}/${encodeURIComponent(item.slug)}/`;link.target='_blank';link.rel='noopener noreferrer';if(item.kind==='package')text.append(node('small','pokrywa: '+item.covered_names.join(', ')));row.append(text,node('span',money(item.price,item.currency),'price'));box.append(row)}); $('result').classList.remove('hidden'); $('result').scrollIntoView({behavior:'smooth'}) }
+function renderResult(r){ const box=$('result-body'); box.replaceChildren(); const metrics=node('div',undefined,'metrics'); [['Cena osobno',r.original_sum,''],['Cena zestawu',r.optimized_sum,''],['Oszczędność',r.savings,'saving']].forEach(([label,value,cls])=>{const m=node('div',label,'metric '+cls);m.append(node('strong',money(value,r.currency)));metrics.append(m)}); box.append(metrics,node('small','Metoda optymalizacji: '+optimizationMethod(r.solver_note)));
+if(r.warning)box.append(node('p',r.warning,'warning'));
+r.chosen.forEach(item=>{const row=node('div',undefined,'choice'),text=node('span'),link=node('a',item.name);text.append(document.createTextNode(item.kind==='package'?'Pakiet: ':'Produkt: '),link);link.href=`https://diag.pl/sklep/${item.kind==='package'?'pakiety':'badania'}/${encodeURIComponent(item.slug)}/`;link.target='_blank';link.rel='noopener noreferrer';if(item.kind==='package')text.append(node('small','pokrywa: '+item.covered_names.join(', ')));row.append(text,node('span',money(item.price,r.currency),'price'));box.append(row)}); $('result').classList.remove('hidden'); $('result').scrollIntoView({behavior:'smooth'}) }
 function showError(e){ const box=$('result-body');box.replaceChildren(node('div',e.message,'error'));$('result').classList.remove('hidden') }
 $('refresh').onclick=async()=>{ const b=$('refresh'); if(!selectedInstitution||!confirm('Pobrać aktualne ceny dla wybranego punktu DIAG.pl?'))return; b.disabled=true;b.textContent='Pobieram…';try{const r=await api('/api/refresh',{method:'POST'});await loadStatus();clearProductSelection();alert(`Pobrano ${r.items} produktów i ${r.institutions} punktów pobrań.`)}catch(e){showError(e)}finally{b.disabled=!selectedInstitution;b.textContent='↻  Odśwież dane'} };
 loadStatus();

@@ -108,7 +108,7 @@ Tryb `automatyczny` wybiera metodę zależnie od rozmiaru wejścia:
 
 1. do 20 badań - dokładne programowanie dynamiczne po maskach bitowych,
 2. powyżej 20 badań - dokładny solver ILP, jeśli dostępne są `numpy` i `scipy`,
-3. bez zależności ILP - szybki algorytm zachłanny z wyraźnym oznaczeniem, że wynik jest przybliżony.
+3. gdy solver ILP jest niedostępny - szybki algorytm zachłanny z ostrzeżeniem, że wynik jest przybliżony, i poleceniem instalacji dla Pythona używanego przez aplikację.
 
 Metodę można wskazać jawnie:
 
@@ -118,12 +118,23 @@ python3 diagpl-optimize-cli.py optymalizuj --algorytm ilp "OB" "CRP, ilościowo"
 python3 diagpl-optimize-cli.py optymalizuj --algorytm zachlanny "OB" "CRP, ilościowo"
 ```
 
-Instalacja opcjonalnych zależności w środowisku wirtualnym:
+### Instalacja dokładnego solvera dla większych list
+
+Aplikacja nie instaluje pakietów samodzielnie. Na Windows uruchom poniższe polecenia w PowerShellu, w katalogu projektu. Nie musisz aktywować środowiska wirtualnego:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade numpy scipy
+.\.venv\Scripts\python.exe .\diagpl-optimize-gui.py
+```
+
+Na Linuxie i macOS:
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-python3 -m pip install numpy scipy
+python3 -m pip install --upgrade numpy scipy
+python3 diagpl-optimize-gui.py
 ```
 
 ## Dane lokalne

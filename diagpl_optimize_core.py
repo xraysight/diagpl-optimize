@@ -13,8 +13,8 @@ Przykłady użycia:
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
+import shlex
 import shutil
 import sqlite3
 import sys
@@ -944,19 +944,20 @@ def optimize_exact(candidates: list[dict[str, Any]], target_mask: int) -> tuple[
     return dp[target_mask]
 
 
-def ilp_dependency_error(exc: Exception | None = None) -> RuntimeError:
-    details = f" Szczegóły importu: {exc}" if exc else ""
-    return RuntimeError(
-        "Algorytm ILP wymaga pakietów numpy i scipy w tym interpreterze Pythona "
-        f"({sys.executable}). Uruchamiasz skrypt przez interpreter, który ich nie ma. "
-        "Rozwiązania: użyj --algorytm automatyczny albo --algorytm zachlanny, uruchom skrypt interpreterem/venv z numpy+scipy, "
-        "albo zainstaluj zależności dla tego Pythona (np. python3 -m pip install numpy scipy lub pakiety systemowe python3-numpy python3-scipy)."
-        + details
-    )
-
-
-def has_ilp_dependencies() -> bool:
-    return importlib.util.find_spec("numpy") is not None and importlib.util.find_spec("scipy.optimize") is not None
+class IlpUnavailableError(RuntimeError):
+    def __init__(self) -> None:
+        if sys.platform == "win32":
+            terminal = "PowerShellu"
+            python = "& '" + sys.executable.replace("'", "''") + "'"
+        else:
+            terminal = "terminalu"
+            python = shlex.quote(sys.executable)
+        super().__init__(
+            "Do dokładnego obliczenia potrzebne są działające pakiety NumPy i SciPy. "
+            f"Aby je doinstalować lub zaktualizować, uruchom w {terminal}:\n"
+            f"{python} -m pip install --upgrade numpy scipy\n"
+            "Następnie uruchom aplikację ponownie."
+        )
 
 
 def optimize_ilp(candidates: list[dict[str, Any]], product_count: int) -> tuple[float, list[dict[str, Any]]]:
@@ -966,7 +967,7 @@ def optimize_ilp(candidates: list[dict[str, Any]], product_count: int) -> tuple[
         import numpy as np
         from scipy.optimize import Bounds, LinearConstraint, milp
     except Exception as exc:  # noqa: BLE001 - optional dependency fallback handled by caller.
-        raise ilp_dependency_error(exc) from exc
+        raise IlpUnavailableError() from exc
 
     if not candidates:
         raise RuntimeError("Brak kandydatów optymalizacji")
@@ -1020,16 +1021,6 @@ def optimize_greedy(candidates: list[dict[str, Any]], target_mask: int) -> tuple
     return sum(float(candidate["price"]) for candidate in chosen), chosen
 
 
-def choose_optimization_solver(solver: str, max_exact_products: int, product_count: int) -> str:
-    if solver != "auto":
-        return solver
-    if product_count <= max_exact_products:
-        return "exact"
-    if has_ilp_dependencies():
-        return "ilp"
-    return "greedy"
-
-
 def optimize_products(
     db: str,
     products: list[str],
@@ -1061,23 +1052,31 @@ def optimize_products(
         ]
         candidates = remove_dominated_candidates(individual_candidates + package_candidates(connection, fetch_run_id, requested_by_id))
         original_sum = sum(float(product["price"]) for product in requested)
-        selected_solver = choose_optimization_solver(solver, max_exact_products, len(requested))
+        selected_solver = solver
+        if solver == "auto":
+            selected_solver = "exact" if len(requested) <= max_exact_products else "ilp"
+        warning = None
         if selected_solver == "exact":
             optimized_sum, chosen = optimize_exact(candidates, target_mask)
-            solver_note = "exact DP"
         elif selected_solver == "ilp":
-            optimized_sum, chosen = optimize_ilp(candidates, len(requested))
-            solver_note = "ILP exact"
+            try:
+                optimized_sum, chosen = optimize_ilp(candidates, len(requested))
+            except IlpUnavailableError as exc:
+                if solver != "auto":
+                    raise
+                selected_solver = "greedy"
+                optimized_sum, chosen = optimize_greedy(candidates, target_mask)
+                warning = f"Wynik jest przybliżony i może nie być najtańszy. {exc}"
         elif selected_solver == "greedy":
             optimized_sum, chosen = optimize_greedy(candidates, target_mask)
-            solver_note = "greedy approximate"
         else:
             raise RuntimeError(f"Nieznany algorytm: {selected_solver}")
 
     currency = requested[0]["currency"] or "PLN"
     return {
         "solver": selected_solver,
-        "solver_note": solver_note,
+        "solver_note": {"exact": "exact DP", "ilp": "ILP exact", "greedy": "greedy approximate"}[selected_solver],
+        "warning": warning,
         "currency": currency,
         "original_sum": original_sum,
         "optimized_sum": optimized_sum,
@@ -1100,10 +1099,12 @@ def run_optimize(args: argparse.Namespace) -> int:
         "greedy approximate": "przybliżony algorytm zachłanny",
     }
     print(f"Algorytm: {method_names.get(result['solver_note'], result['solver_note'])}")
-    if result["solver"] == "greedy":
+    if result["warning"]:
+        print(f"Uwaga: {result['warning']}")
+    elif result["solver"] == "greedy":
         print("Uwaga: algorytm zachłanny jest przybliżony — wynik może nie być globalnie optymalny.")
     print(f"Suma cen podanych produktów: {format_price(result['original_sum'], result['currency'])}")
-    print(f"Suma cen optymalnej mieszanki: {format_price(result['optimized_sum'], result['currency'])}")
+    print(f"Suma cen proponowanego zestawu: {format_price(result['optimized_sum'], result['currency'])}")
     print(f"Oszczędność: {format_price(result['savings'], result['currency'])}")
     print("Mieszanka:")
     for item in result["chosen"]:

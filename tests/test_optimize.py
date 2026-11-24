@@ -1,12 +1,60 @@
 from __future__ import annotations
 
 import sqlite3
-from contextlib import closing
+import sys
 import tempfile
 import unittest
+from contextlib import closing
+from importlib.machinery import ModuleSpec
 from pathlib import Path
+from types import ModuleType
+from unittest.mock import patch
 
-from diagpl_optimize_core import optimize_products
+from diagpl_optimize_core import create_schema, insert_snapshot, optimize_products, replace_institutions
+
+
+class OptionalSolverTest(unittest.TestCase):
+    def setUp(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.db = str(Path(directory.name) / "products.sqlite")
+        self.names = [f"Badanie {i}" for i in range(1, 22)]
+        products = [
+            {
+                "id": i, "uuid": str(i), "slug": f"badanie-{i}", "name": name,
+                "type": "bloodtest", "elabCode": str(i),
+                "prices": {"sellState": "available", "sale": {"gross": 10, "currency": "PLN"}},
+            }
+            for i, name in enumerate(self.names, 1)
+        ]
+        with closing(sqlite3.connect(self.db)) as connection, connection:
+            create_schema(connection)
+            replace_institutions(connection, {"data": [{"id": 889, "name": "Punkt testowy"}]})
+            insert_snapshot(connection, {"source": "test", "pages": [], "data": products}, 889, 21)
+        self.numpy = ModuleType("numpy")
+        self.numpy.__spec__ = ModuleSpec("numpy", loader=None)
+
+    def test_large_auto_request_returns_approximate_result_with_install_help_if_scipy_is_missing(self) -> None:
+        with patch.dict(sys.modules, {"numpy": self.numpy, "scipy": None}):
+            result = optimize_products(self.db, self.names)
+
+        self.assertEqual(result["solver"], "greedy")
+        self.assertEqual(result["optimized_sum"], 210)
+        self.assertIn("wynik jest przybliżony", result["warning"].lower())
+        self.assertIn("-m pip install --upgrade numpy scipy", result["warning"])
+
+    def test_explicit_ilp_failure_gives_a_powershell_command_for_the_running_python(self) -> None:
+        with (
+            patch.dict(sys.modules, {"numpy": self.numpy, "scipy": None}),
+            patch.object(sys, "platform", "win32"),
+            patch.object(sys, "executable", r"C:\Piotr's Apps\.venv\Scripts\python.exe"),
+        ):
+            with self.assertRaises(RuntimeError) as caught:
+                optimize_products(self.db, self.names, solver="ilp")
+
+        self.assertIn("PowerShell", str(caught.exception))
+        self.assertIn(r"& 'C:\Piotr''s Apps\.venv\Scripts\python.exe' -m pip install --upgrade numpy scipy",
+                      str(caught.exception).splitlines())
 
 
 class OptimizationLinksTest(unittest.TestCase):
